@@ -1,0 +1,19 @@
+# Moodle Plugin "sync_service"
+This plugin for Moodle (type: local) adds serveral functions to the Moodle Web Service API.
+Those fuctions allow users and external services to remotely create and move new course modules.
+Furthermore an external service (called "Course Sync Extension Service") containing the newly added functions and other core web service functions, which are helpful to use the added functions, is added.
+
+Following functions are added:
+Function | Description | Note
+-------- | -------- | --------
+local_course_add_new_course_module_url |Add course module URL |
+local_course_add_new_course_module_resource | Add course module Resource | File needs to be uploaded with "/webservice/upload.php" web service call.
+local_course_add_new_course_module_directory | Add course modul Folder | Files need to be uploaded with "/webservice/upload.php" web service call.
+local_course_add_files_to_directory | Add files to folder | Work in progress - not working yet
+local_course_move_module_to_specific_position | Move a module to a dedicated position |
+
+Usage:  
+* Tested on Moodle version 3.11.4.  
+* Usage of the "REST (returning JSON)"- web service protocol.
+* To install the plugin, unzip the archive and copy the folder "sync_service" into the directory "\server\moodle\local". Afterwards restart Moodle, log-in as an admin and follow the installation process.
+* To use the added fuctions, either enable and use the added external service (file upload and file download must be allowed) or create a new external service.
