@@ -89,6 +89,7 @@ class local_sync_service_external extends external_api {
         $instance->introformat = \FORMAT_HTML;
         $instance->externalurl = $params[ 'url' ];
         $instance->id = url_add_instance($instance, null);
+    
 
         $cm->id = add_course_module($cm);
 
@@ -134,6 +135,7 @@ class local_sync_service_external extends external_api {
                 'sectionnum' => new external_value( PARAM_TEXT, 'relative number of the section' ),
                 'itemid' => new external_value( PARAM_TEXT, 'id of the upload' ),
                 'displayname' => new external_value( PARAM_TEXT, 'displayed mod name' ),
+                'time' => new external_value( PARAM_TEXT, 'defines the mod. visibility' ),
                 'beforemod' => new external_value( PARAM_TEXT, 'mod to set before', VALUE_DEFAULT, null ),
             )
         );
@@ -146,13 +148,15 @@ class local_sync_service_external extends external_api {
      * @param $sectionnum The number of the section inside the course.
      * @param $displayname Displayname of the Module.
      * @param $itemid File to publish.
+     * @param $time Time to upload.
      * @param $beforemod Optional parameter, a Module where the new Module should be placed before.
      * @return $update Message: Successful and $cmid of the new Module.
      */
-    public static function local_sync_service_add_new_course_module_resource($courseid, $sectionnum, $itemid, $displayname,
+    public static function local_sync_service_add_new_course_module_resource($courseid, $sectionnum, $itemid, $displayname, $time,
             $beforemod = null) {
         global $DB, $CFG;
         require_once($CFG->dirroot . '/mod/' . '/resource' . '/lib.php');
+        require_once($CFG->dirroot . '/availability/' . '/condition' . '/date' . '/classes' . '/condition.php');
 
         // Parameter validation.
         $params = self::validate_parameters(
@@ -162,6 +166,7 @@ class local_sync_service_external extends external_api {
                 'sectionnum' => $sectionnum,
                 'itemid' => $itemid,
                 'displayname' => $displayname,
+                'time' => $time,
                 'beforemod' => $beforemod,
             )
         );
@@ -179,7 +184,8 @@ class local_sync_service_external extends external_api {
         $cm->course     = $params[ 'courseid' ];
         $cm->module     = $DB->get_field('modules', 'id', array( 'name' => $modulename ));
         $cm->section    = $params[ 'sectionnum' ];
-
+        //$cm->visible = 0;
+        $cm->availability = "{\"op\":\"&\",\"c\":[{\"type\":\"date\",\"d\":\">=\",\"t\":" . $params[ 'time' ] . "}],\"showc\":[true]}";
         $cm->id = add_course_module($cm);
         $cmid = $cm->id;
 
@@ -189,6 +195,7 @@ class local_sync_service_external extends external_api {
         $instance->intro = null;
         $instance->introformat = \FORMAT_HTML;
         $instance->coursemodule = $cmid;
+    
 
         $instance->files = $params[ 'itemid' ];
         $instance->id = resource_add_instance($instance, null);
