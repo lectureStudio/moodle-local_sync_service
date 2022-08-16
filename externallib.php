@@ -135,7 +135,8 @@ class local_sync_service_external extends external_api {
                 'sectionnum' => new external_value( PARAM_TEXT, 'relative number of the section' ),
                 'itemid' => new external_value( PARAM_TEXT, 'id of the upload' ),
                 'displayname' => new external_value( PARAM_TEXT, 'displayed mod name' ),
-                'time' => new external_value( PARAM_TEXT, 'defines the mod. visibility' ),
+                'time' => new external_value( PARAM_TEXT, 'defines the mod. availability' ),
+                'visible' => new external_value( PARAM_TEXT, 'defines the mod. visibility', VALUE_DEFAULT, true ),
                 'beforemod' => new external_value( PARAM_TEXT, 'mod to set before', VALUE_DEFAULT, null ),
             )
         );
@@ -149,11 +150,12 @@ class local_sync_service_external extends external_api {
      * @param $displayname Displayname of the Module.
      * @param $itemid File to publish.
      * @param $time Time to upload.
+     * @param $visible visible for course members.
      * @param $beforemod Optional parameter, a Module where the new Module should be placed before.
      * @return $update Message: Successful and $cmid of the new Module.
      */
-    public static function local_sync_service_add_new_course_module_resource($courseid, $sectionnum, $itemid, $displayname, $time,
-            $beforemod = null) {
+    public static function local_sync_service_add_new_course_module_resource($courseid, $sectionnum, $itemid, $displayname, $time
+            = null, $visible = true, $beforemod = null) {
         global $DB, $CFG;
         require_once($CFG->dirroot . '/mod/' . '/resource' . '/lib.php');
         require_once($CFG->dirroot . '/availability/' . '/condition' . '/date' . '/classes' . '/condition.php');
@@ -167,6 +169,7 @@ class local_sync_service_external extends external_api {
                 'itemid' => $itemid,
                 'displayname' => $displayname,
                 'time' => $time,
+                'visible' => $visible,
                 'beforemod' => $beforemod,
             )
         );
@@ -184,8 +187,12 @@ class local_sync_service_external extends external_api {
         $cm->course     = $params[ 'courseid' ];
         $cm->module     = $DB->get_field('modules', 'id', array( 'name' => $modulename ));
         $cm->section    = $params[ 'sectionnum' ];
-        //$cm->visible = 0;
-        $cm->availability = "{\"op\":\"&\",\"c\":[{\"type\":\"date\",\"d\":\">=\",\"t\":" . $params[ 'time' ] . "}],\"showc\":[true]}";
+        if(!is_null($params[ 'time' ])){
+            $cm->availability = "{\"op\":\"&\",\"c\":[{\"type\":\"date\",\"d\":\">=\",\"t\":" . $params[ 'time' ] . "}],\"showc\":[" . $params[ 'visible' ] . "]}";
+        }
+        else if( $params[ 'visible' ] === 'false' ){
+            $cm->visible = 0;
+        }
         $cm->id = add_course_module($cm);
         $cmid = $cm->id;
 
