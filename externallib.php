@@ -172,10 +172,9 @@ class local_sync_service_external extends external_api {
         $cm->module     = $DB->get_field( 'modules', 'id', array('name' => $modulename) );
         $cm->instance   = $instance->id;
         $cm->section    = $params[ 'sectionnum' ];
-        if(!is_null($params[ 'time' ])){
+        if (!is_null($params[ 'time' ])) {
             $cm->availability = "{\"op\":\"&\",\"c\":[{\"type\":\"date\",\"d\":\">=\",\"t\":" . $params[ 'time' ] . "}],\"showc\":[" . $params[ 'visible' ] . "]}";
-        }
-        else if( $params[ 'visible' ] === 'false' ){
+        } else if ( $params[ 'visible' ] === 'false' ) {
             $cm->visible = 0;
         }
 
@@ -266,10 +265,9 @@ class local_sync_service_external extends external_api {
         $cm->course     = $params[ 'courseid' ];
         $cm->module     = $DB->get_field('modules', 'id', array( 'name' => $modulename ));
         $cm->section    = $params[ 'sectionnum' ];
-        if(!is_null($params[ 'time' ])){
+        if (!is_null($params[ 'time' ])) {
             $cm->availability = "{\"op\":\"&\",\"c\":[{\"type\":\"date\",\"d\":\">=\",\"t\":" . $params[ 'time' ] . "}],\"showc\":[" . $params[ 'visible' ] . "]}";
-        }
-        else if( $params[ 'visible' ] === 'false' ){
+        } else if( $params[ 'visible' ] === 'false' ) {
             $cm->visible = 0;
         }
         $cm->id = add_course_module($cm);
@@ -436,10 +434,9 @@ class local_sync_service_external extends external_api {
         $cm->course     = $params[ 'courseid' ];
         $cm->module     = $DB->get_field('modules', 'id', array( 'name' => $modulename ));
         $cm->section    = $params[ 'sectionnum' ];
-        if(!is_null($params[ 'time' ])){
+        if (!is_null($params[ 'time' ])) {
             $cm->availability = "{\"op\":\"&\",\"c\":[{\"type\":\"date\",\"d\":\">=\",\"t\":" . $params[ 'time' ] . "}],\"showc\":[true]}";
         }
-
         $cm->id = add_course_module($cm);
         $cmid = $cm->id;
 
