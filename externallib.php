@@ -32,9 +32,78 @@ require_once($CFG->dirroot . '/course/lib.php');
 defined('MOODLE_INTERNAL') || die();
 
 class local_sync_service_external extends external_api {
+    /**
+     * Defines the necessary method parameters.
+     * @return external_function_parameters
+     */
+    public static function local_sync_service_add_new_section_parameters() {
+        return new external_function_parameters(
+            array(
+                'courseid' => new external_value( PARAM_TEXT, 'id of course' ),
+                'sectionname' => new external_value( PARAM_TEXT, 'name of section' ),
+                'sectionnum' => new external_value( PARAM_TEXT, 'position of the new section ' ),
+            )
+        );
+    }
 
     /**
-     * Defines the necessary parameters to execute the request.
+     * Creating and positioning of a new section.
+     *
+     * @param $courseid The course id.
+     * @param $sectionname Name of the new section.
+     * @param $sectionnum The position of the section inside the course, will be placed before a exisiting section with same sectionnum.
+     * @return $update Message: Successful.
+     */
+    public static function local_sync_service_add_new_section($courseid, $sectionname, $sectionnum) {
+        global $DB, $CFG;
+       // Parameter validation.
+       $params = self::validate_parameters(
+        self::local_sync_service_add_new_section_parameters(),
+            array(
+                'courseid' => $courseid,
+                'sectionname' => $sectionname,
+                'sectionnum' => $sectionnum,
+            )
+        );
+
+        // Ensure the current user has required permission in this course.
+        $context = context_course::instance($params[ 'courseid' ]);
+        self::validate_context($context);
+
+        // Required permissions.
+        require_capability('block/section_links:addinstance', $context);
+
+        $cw = course_create_section($params[ 'courseid' ], $params[ 'sectionnum' ], false);
+
+        $section = $DB->get_record('course_sections', array('id' => $cw->id), '*', MUST_EXIST);
+        $course = $DB->get_record('course', array('id' => $section->course), '*', MUST_EXIST);
+
+        $data[ 'name' ] = $params[ 'sectionname' ];
+
+        course_update_section($course, $section, $data);
+
+        $update = [
+            'message' => 'Successful',
+        ];
+        return $update;
+    }
+
+    /**
+     * Obtains the Parameter which will be returned.
+     * @return external_description
+     */
+    public static function local_sync_service_add_new_section_returns() {
+        return new external_single_structure(
+            array(
+                'message' => new external_value( PARAM_TEXT, 'if the execution was successful' ),
+            )
+        );
+    }
+
+
+    /**
+     * Defines the necessary method parameters.
+     * @return external_function_parameters
      */
     public static function local_sync_service_add_new_course_module_url_parameters() {
         return new external_function_parameters(
@@ -43,23 +112,27 @@ class local_sync_service_external extends external_api {
                 'sectionnum' => new external_value( PARAM_TEXT, 'relative number of the section' ),
                 'urlname' => new external_value( PARAM_TEXT, 'displayed mod name' ),
                 'url' => new external_value( PARAM_TEXT, 'url to insert' ),
-                'beforemod' => new external_value( PARAM_TEXT, 'mod to set before', VALUE_DEFAULT, null),
+                'time' => new external_value( PARAM_TEXT, 'defines the mod. visibility', VALUE_DEFAULT, null ),
+                'visible' => new external_value( PARAM_TEXT, 'defines the mod. visibility' ),
+                'beforemod' => new external_value( PARAM_TEXT, 'mod to set before', VALUE_DEFAULT, null ),
             )
         );
     }
 
 
     /**
-     * This method implements the logic for the API-Call.
+     * Method to create a new course module containing a url.
      *
      * @param $courseid The course id.
      * @param $sectionnum The number of the section inside the course.
      * @param $urlname Displayname of the Module.
      * @param $url Url to publish.
+     * @param $time availability time.
+     * @param $visible visible for course members.
      * @param $beforemod Optional parameter, a Module where the new Module should be placed before.
      * @return $update Message: Successful and $cmid of the new Module.
      */
-    public static function local_sync_service_add_new_course_module_url($courseid, $sectionnum, $urlname, $url, $beforemod = null) {
+    public static function local_sync_service_add_new_course_module_url($courseid, $sectionnum, $urlname, $url, $time = null, $visible, $beforemod = null) {
         global $DB, $CFG;
         require_once($CFG->dirroot . '/mod/' . '/url' . '/lib.php');
 
@@ -71,6 +144,8 @@ class local_sync_service_external extends external_api {
                 'sectionnum' => $sectionnum,
                 'urlname' => $urlname,
                 'url' => $url,
+                'time' => $time,
+                'visible' => $visible,
                 'beforemod' => $beforemod,
             )
         );
@@ -89,9 +164,6 @@ class local_sync_service_external extends external_api {
         $instance->introformat = \FORMAT_HTML;
         $instance->externalurl = $params[ 'url' ];
         $instance->id = url_add_instance($instance, null);
-    
-
-        $cm->id = add_course_module($cm);
 
         $modulename = 'url';
 
@@ -100,6 +172,12 @@ class local_sync_service_external extends external_api {
         $cm->module     = $DB->get_field( 'modules', 'id', array('name' => $modulename) );
         $cm->instance   = $instance->id;
         $cm->section    = $params[ 'sectionnum' ];
+        if(!is_null($params[ 'time' ])){
+            $cm->availability = "{\"op\":\"&\",\"c\":[{\"type\":\"date\",\"d\":\">=\",\"t\":" . $params[ 'time' ] . "}],\"showc\":[" . $params[ 'visible' ] . "]}";
+        }
+        else if( $params[ 'visible' ] === 'false' ){
+            $cm->visible = 0;
+        }
 
         $cm->id = add_course_module( $cm );
         $cmid = $cm->id;
@@ -115,6 +193,7 @@ class local_sync_service_external extends external_api {
 
     /**
      * Obtains the Parameter which will be returned.
+     * @return external_description
      */
     public static function local_sync_service_add_new_course_module_url_returns() {
         return new external_single_structure(
@@ -126,7 +205,8 @@ class local_sync_service_external extends external_api {
     }
 
     /**
-     * Defines the necessary parameters to execute the request.
+     * Defines the necessary method parameters.
+     * @return external_function_parameters
      */
     public static function local_sync_service_add_new_course_module_resource_parameters() {
         return new external_function_parameters(
@@ -135,27 +215,26 @@ class local_sync_service_external extends external_api {
                 'sectionnum' => new external_value( PARAM_TEXT, 'relative number of the section' ),
                 'itemid' => new external_value( PARAM_TEXT, 'id of the upload' ),
                 'displayname' => new external_value( PARAM_TEXT, 'displayed mod name' ),
-                'time' => new external_value( PARAM_TEXT, 'defines the mod. availability' ),
-                'visible' => new external_value( PARAM_TEXT, 'defines the mod. visibility', VALUE_DEFAULT, true ),
+                'time' => new external_value( PARAM_TEXT, 'defines the mod. availability', VALUE_DEFAULT, null ),
+                'visible' => new external_value( PARAM_TEXT, 'defines the mod. visibility' ),
                 'beforemod' => new external_value( PARAM_TEXT, 'mod to set before', VALUE_DEFAULT, null ),
             )
         );
     }
 
     /**
-     * This method implements the logic for the API-Call.
+     * Method to create a new course module containing a file.
      *
      * @param $courseid The course id.
      * @param $sectionnum The number of the section inside the course.
-     * @param $displayname Displayname of the Module.
      * @param $itemid File to publish.
-     * @param $time Time to upload.
+     * @param $displayname Displayname of the Module.
+     * @param $time availability time.
      * @param $visible visible for course members.
      * @param $beforemod Optional parameter, a Module where the new Module should be placed before.
      * @return $update Message: Successful and $cmid of the new Module.
      */
-    public static function local_sync_service_add_new_course_module_resource($courseid, $sectionnum, $itemid, $displayname, $time
-            = null, $visible = true, $beforemod = null) {
+    public static function local_sync_service_add_new_course_module_resource($courseid, $sectionnum, $itemid, $displayname, $time = null, $visible, $beforemod = null) {
         global $DB, $CFG;
         require_once($CFG->dirroot . '/mod/' . '/resource' . '/lib.php');
         require_once($CFG->dirroot . '/availability/' . '/condition' . '/date' . '/classes' . '/condition.php');
@@ -202,7 +281,6 @@ class local_sync_service_external extends external_api {
         $instance->intro = null;
         $instance->introformat = \FORMAT_HTML;
         $instance->coursemodule = $cmid;
-    
 
         $instance->files = $params[ 'itemid' ];
         $instance->id = resource_add_instance($instance, null);
@@ -218,6 +296,7 @@ class local_sync_service_external extends external_api {
 
     /**
      * Obtains the Parameter which will be returned.
+     * @return external_description
      */
     public static function local_sync_service_add_new_course_module_resource_returns() {
         return new external_single_structure(
@@ -229,7 +308,8 @@ class local_sync_service_external extends external_api {
     }
 
     /**
-     * Defines the necessary parameters to execute the request.
+     * Defines the necessary method parameters.
+     * @return external_function_parameters
      */
     public static function local_sync_service_move_module_to_specific_position_parameters() {
         return new external_function_parameters(
@@ -242,7 +322,7 @@ class local_sync_service_external extends external_api {
     }
 
     /**
-     * This method implements the logic for the API-Call.
+     * Method to position an existing course module.
      *
      * @param $cmid The Module to move.
      * @param $sectionid The id of the section inside the course.
@@ -288,6 +368,7 @@ class local_sync_service_external extends external_api {
 
     /**
      * Obtains the Parameter which will be returned.
+     * @return external_description
      */
     public static function local_sync_service_move_module_to_specific_position_returns() {
         return new external_single_structure(
@@ -298,7 +379,8 @@ class local_sync_service_external extends external_api {
     }
 
     /**
-     * Defines the necessary parameters to execute the request.
+     * Defines the necessary method parameters.
+     * @return external_function_parameters
      */
     public static function local_sync_service_add_new_course_module_directory_parameters() {
         return new external_function_parameters(
@@ -307,23 +389,24 @@ class local_sync_service_external extends external_api {
                 'sectionnum' => new external_value( PARAM_TEXT, 'relative number of the section' ),
                 'itemid' => new external_value( PARAM_TEXT, 'id of the upload' ),
                 'displayname' => new external_value( PARAM_TEXT, 'displayed mod name' ),
+                'time' => new external_value( PARAM_TEXT, 'defines the mod. visibility', VALUE_DEFAULT, null ),
                 'beforemod' => new external_value( PARAM_TEXT, 'mod to set before', VALUE_DEFAULT, null ),
             )
         );
     }
 
     /**
-     * This method implements the logic for the API-Call.
+     * Method to create a new course module of type folder.
      *
      * @param $courseid The course id.
      * @param $sectionnum The number of the section inside the course.
      * @param $displayname Displayname of the Module.
      * @param $itemid Files in same draft area to upload.
+     * @param $time availability time.
      * @param $beforemod Optional parameter, a Module where the new Module should be placed before.
      * @return $update Message: Successful and $cmid of the new Module.
      */
-    public static function local_sync_service_add_new_course_module_directory($courseid, $sectionnum, $itemid, $displayname,
-            $beforemod = null) {
+    public static function local_sync_service_add_new_course_module_directory($courseid, $sectionnum, $itemid, $displayname, $time = null, $beforemod = null) {
         global $DB, $CFG;
         require_once($CFG->dirroot . '/mod/' . '/folder' . '/lib.php');
 
@@ -335,6 +418,7 @@ class local_sync_service_external extends external_api {
                 'sectionnum' => $sectionnum,
                 'itemid' => $itemid,
                 'displayname' => $displayname,
+                'time' => $time,
                 'beforemod' => $beforemod,
             )
         );
@@ -352,6 +436,9 @@ class local_sync_service_external extends external_api {
         $cm->course     = $params[ 'courseid' ];
         $cm->module     = $DB->get_field('modules', 'id', array( 'name' => $modulename ));
         $cm->section    = $params[ 'sectionnum' ];
+        if(!is_null($params[ 'time' ])){
+            $cm->availability = "{\"op\":\"&\",\"c\":[{\"type\":\"date\",\"d\":\">=\",\"t\":" . $params[ 'time' ] . "}],\"showc\":[true]}";
+        }
 
         $cm->id = add_course_module($cm);
         $cmid = $cm->id;
@@ -376,6 +463,7 @@ class local_sync_service_external extends external_api {
 
     /**
      * Obtains the Parameter which will be returned.
+     * @return external_description
      */
     public static function local_sync_service_add_new_course_module_directory_returns() {
         return new external_single_structure(
@@ -386,9 +474,10 @@ class local_sync_service_external extends external_api {
         );
     }
 
-     /**
-      * Defines the necessary parameters to execute the request.
-      */
+    /**
+     * Defines the necessary method parameters.
+     * @return external_function_parameters
+     */
     public static function local_sync_service_add_files_to_directory_parameters() {
         return new external_function_parameters(
             array(
@@ -446,6 +535,7 @@ class local_sync_service_external extends external_api {
 
     /**
      * Obtains the Parameter which will be returned.
+     * @return external_description
      */
     public static function local_sync_service_add_files_to_directory_returns() {
         return new external_single_structure(
