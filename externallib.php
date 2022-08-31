@@ -56,8 +56,8 @@ class local_sync_service_external extends external_api {
      */
     public static function local_sync_service_add_new_section($courseid, $sectionname, $sectionnum) {
         global $DB, $CFG;
-       // Parameter validation.
-       $params = self::validate_parameters(
+        // Parameter validation.
+        $params = self::validate_parameters(
         self::local_sync_service_add_new_section_parameters(),
             array(
                 'courseid' => $courseid,
