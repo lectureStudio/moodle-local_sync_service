@@ -24,6 +24,15 @@
 
 defined('MOODLE_INTERNAL') || die();
 $functions = array(
+    'local_course_add_new_section' => array(
+        'classname' => 'local_sync_service_external',
+        'methodname' => 'local_sync_service_add_new_section',
+        'classpath' => 'local/sync_service/externallib.php',
+        'description' => 'Add new course section',
+        'type' => 'write',
+        'ajax' => true,
+        'capabilities' => 'block/section_links:addinstance',
+    ),
     'local_course_add_new_course_module_url' => array(
         'classname' => 'local_sync_service_external',
         'methodname' => 'local_sync_service_add_new_course_module_url',
@@ -76,6 +85,7 @@ $functions = array(
 $services = array(
     'Course Sync Extension Service' => array(
         'functions' => array(
+            'local_course_add_new_section',
             'local_course_add_new_course_module_url',
             'local_course_add_new_course_module_resource',
             'local_course_move_module_to_specific_position',
