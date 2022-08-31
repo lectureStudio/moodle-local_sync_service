@@ -441,3 +441,4 @@ class local_sync_service_external extends external_api {
         );
     }
 }
+
