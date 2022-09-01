@@ -13,6 +13,7 @@ local_course_add_new_course_module_resource | Add course module Resource | File 
 local_course_add_new_course_module_directory | Add course modul Folder | Files need to be uploaded with "/webservice/upload.php" web service call.
 local_course_add_files_to_directory | Add files to folder | Work in progress - not working yet
 local_course_move_module_to_specific_position | Move a module to a dedicated position |
+local_course_add_new_section | Create and position a new course section | Since version 2.0.0
 
 Usage:  
 * Tested on Moodle version 3.11.4. and 4.0.2. 
