@@ -1,4 +1,7 @@
 # Moodle Plugin "sync_service"
+
+**Please note: This repository is outdatet. Please visit the new repository: [https://github.com/MoodleSync/sync-plugin](https://github.com/MoodleSync/sync-plugin).**
+
 This plugin for Moodle (type: local) adds serveral functions to the Moodle Web Service API.
 Those fuctions allow users and external services to remotely create and move new course modules.
 Furthermore an external service (called "Course Sync Extension Service") containing the newly added functions and other core web service functions, which are helpful to use the added functions, is added.
